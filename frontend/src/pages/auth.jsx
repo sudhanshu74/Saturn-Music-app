@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { EyeIcon, EyeOffIcon } from '../components/Icons'; // <-- NEW: Imported the icons
 
 const Auth = () => {
   const location = useLocation();
@@ -16,8 +17,11 @@ const Auth = () => {
     username: '',
     email: '',
     password: '',
-    otp: '' // NEW: For the password reset
+    otp: '' 
   });
+
+  // NEW: State to track if the password should be visible
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -148,12 +152,27 @@ const Auth = () => {
             />
           )}
 
+          {/* NEW: Updated Password Input Block */}
           {(authMode === 'login' || authMode === 'signup' || authMode === 'reset') && (
-            <input 
-              type="password" name="password" placeholder={authMode === 'reset' ? "New Password" : "Password"} 
-              value={formData.password} onChange={handleChange} required 
-              className="w-full px-4 py-3 rounded-lg bg-[#2a2a2a] text-white outline-none focus:ring-2 focus:ring-[#31c93b]"
-            />
+            <div className="relative w-full">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                name="password" 
+                placeholder={authMode === 'reset' ? "New Password" : "Password"} 
+                value={formData.password} 
+                onChange={handleChange} 
+                required 
+                className="w-full px-4 py-3 pr-12 rounded-lg bg-[#2a2a2a] text-white outline-none focus:ring-2 focus:ring-[#31c93b]"
+              />
+              <button
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#31c93b] transition-colors flex items-center justify-center h-full px-1 outline-none"
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+              </button>
+            </div>
           )}
 
           <button type="submit" className="w-full bg-[wheat] text-[#28013f] font-luckiest text-xl py-3 rounded-full mt-4 hover:bg-white transition-transform">
