@@ -10,8 +10,8 @@ const router = express.Router();
 // --- NEW: THE AUTH SHIELD ---
 // Blocks IPs that make more than 10 auth requests in 15 minutes
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
-  max: 10, 
+  windowMs: 15 * 60 * 1000,
+  max: 10,
   message: { message: "Too many attempts. Please try again in 15 minutes." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -20,11 +20,11 @@ const authLimiter = rateLimit({
 // NEW: Explicit Cloud Configuration for Nodemailer to prevent Render hangs
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: { 
-    user: process.env.EMAIL_USER, 
-    pass: process.env.EMAIL_PASS 
+  port: 587,
+  secure: false, // MUST be false for port 587 (Nodemailer will auto-upgrade to secure STARTTLS)
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
   }
 });
 
@@ -48,12 +48,12 @@ router.post('/signup', authLimiter, async (req, res) => {
     await newUser.save();
 
     const verificationLink = `${process.env.BACKEND_URL}/api/auth/verify/${token}`;
-    
+
     // NEW: Safe Error Handling and Database Rollback
     try {
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
-        to: email, 
+        to: email,
         subject: "Welcome to Saturn - Verify Your Email",
         html: `<h2>Welcome to Saturn, ${username}!</h2><p>Please click the link below to verify your email address:</p><a href="${verificationLink}" style="padding: 10px 20px; background-color: #31c93b; color: black; text-decoration: none; border-radius: 5px;">Verify My Account</a>`
       });
@@ -103,7 +103,7 @@ router.post('/login', authLimiter, async (req, res) => {
     await user.save();
 
     res.cookie('jwt_refresh', refreshToken, {
-      httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 
+      httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
     res.status(200).json({ message: "Logged in successfully", accessToken, user: { id: user._id, username: user.username, email: user.email, role: user.role } });
@@ -113,7 +113,7 @@ router.post('/login', authLimiter, async (req, res) => {
 });
 
 router.post('/refresh', async (req, res) => {
-  const refreshToken = req.cookies.jwt_refresh; 
+  const refreshToken = req.cookies.jwt_refresh;
   if (!refreshToken) return res.status(401).json({ message: "No refresh token provided" });
 
   try {
@@ -145,7 +145,7 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "If this email exists, an OTP has been sent." }); 
+    if (!user) return res.status(404).json({ message: "If this email exists, an OTP has been sent." });
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.resetPasswordOtp = otp;
@@ -156,14 +156,14 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
     try {
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
-        to: email, 
+        to: email,
         subject: "Saturn - Password Reset OTP",
         html: `<h2>Password Reset Request</h2><p>Your One-Time Password (OTP) is: <strong style="font-size: 24px; color: #31c93b; letter-spacing: 2px;">${otp}</strong></p><p>This OTP is valid for 10 minutes.</p>`
       });
       res.status(200).json({ message: "OTP sent to your email." });
     } catch (emailError) {
-       console.error("Nodemailer Error during forgot-password:", emailError);
-       return res.status(500).json({ error: "Failed to send OTP email. Please try again later." });
+      console.error("Nodemailer Error during forgot-password:", emailError);
+      return res.status(500).json({ error: "Failed to send OTP email. Please try again later." });
     }
   } catch (err) {
     res.status(500).json({ error: "Failed to process request." });
