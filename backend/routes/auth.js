@@ -2,9 +2,9 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
 const rateLimit = require('express-rate-limit'); 
 const User = require('../models/User');
+const emailService = require('../services/emailService'); // <-- NEW: Import Brevo service
 const router = express.Router();
 
 const authLimiter = rateLimit({
@@ -13,16 +13,6 @@ const authLimiter = rateLimit({
   message: { message: "Too many attempts. Please try again in 15 minutes." },
   standardHeaders: true,
   legacyHeaders: false,
-});
-
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: { 
-    user: process.env.EMAIL_USER, 
-    pass: process.env.EMAIL_PASS 
-  }
 });
 
 router.post('/signup', authLimiter, async (req, res) => {
@@ -39,27 +29,25 @@ router.post('/signup', authLimiter, async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // NEW LOGIC: Do NOT save to database yet!
-    // Instead, package the user data into a temporary JWT token
+    // Stateless Verification - creates token, does not touch DB yet
     const signupToken = jwt.sign(
       { username, email, password: hashedPassword },
       process.env.JWT_SECRET,
-      { expiresIn: '15m' } // The link will expire in 15 minutes
+      { expiresIn: '15m' } 
     );
 
     const verificationLink = `${process.env.BACKEND_URL}/api/auth/verify/${signupToken}`;
 
     try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: email, 
-        subject: "Welcome to Saturn - Verify Your Email",
-        html: `<h2>Welcome to Saturn, ${username}!</h2><p>Please click the link below to verify your email address and activate your account:</p><a href="${verificationLink}" style="padding: 10px 20px; background-color: #31c93b; color: black; text-decoration: none; border-radius: 5px;">Verify My Account</a><p>This link will expire in 15 minutes.</p>`
-      });
+      // Trigger Brevo email
+      await emailService.sendEmail(
+        email, 
+        "Welcome to Saturn - Verify Your Email",
+        `<h2>Welcome to Saturn, ${username}!</h2><p>Please click the link below to verify your email address and activate your account:</p><a href="${verificationLink}" style="padding: 10px 20px; background-color: #31c93b; color: black; text-decoration: none; border-radius: 5px;">Verify My Account</a><p>This link will expire in 15 minutes.</p>`
+      );
 
       res.status(201).json({ message: "Verification email sent! Please check your inbox to complete signup." });
     } catch (emailError) {
-      console.error("Nodemailer Error during signup:", emailError);
       return res.status(500).json({ message: "Could not send verification email. Please try again later." });
     }
 
@@ -70,21 +58,19 @@ router.post('/signup', authLimiter, async (req, res) => {
 
 router.get('/verify/:token', async (req, res) => {
   try {
-    // 1. Decode and verify the JWT token from the email link
     const decoded = jwt.verify(req.params.token, process.env.JWT_SECRET);
     const { username, email, password } = decoded;
 
-    // 2. Double-check if the user was already created (in case they clicked the link twice)
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.redirect(`${process.env.FRONTEND_URL}/auth`);
     }
 
-    // 3. NOW we finally save the user to the database!
+    // Email is verified, save to database
     const newUser = new User({
       username,
       email,
-      password,       // Already hashed during the /signup step
+      password,
       isVerified: true
     });
     await newUser.save();
@@ -163,15 +149,14 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
     await user.save();
 
     try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: email, 
-        subject: "Saturn - Password Reset OTP",
-        html: `<h2>Password Reset Request</h2><p>Your One-Time Password (OTP) is: <strong style="font-size: 24px; color: #31c93b; letter-spacing: 2px;">${otp}</strong></p><p>This OTP is valid for 10 minutes.</p>`
-      });
+      // Trigger Brevo email for OTP
+      await emailService.sendEmail(
+        email, 
+        "Saturn - Password Reset OTP",
+        `<h2>Password Reset Request</h2><p>Your One-Time Password (OTP) is: <strong style="font-size: 24px; color: #31c93b; letter-spacing: 2px;">${otp}</strong></p><p>This OTP is valid for 10 minutes.</p>`
+      );
       res.status(200).json({ message: "OTP sent to your email." });
     } catch (emailError) {
-       console.error("Nodemailer Error during forgot-password:", emailError);
        return res.status(500).json({ error: "Failed to send OTP email. Please try again later." });
     }
   } catch (err) {
