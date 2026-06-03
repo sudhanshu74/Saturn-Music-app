@@ -4,7 +4,7 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
 import Player from './components/Player';
-import Auth from "./pages/Auth"; // Adjust the path if you put this in a 'pages' folder
+import Auth from "./pages/auth"; // Adjust the path if you put this in a 'pages' folder
 
 // This is your standard music player view
 const MainLayout = () => {
