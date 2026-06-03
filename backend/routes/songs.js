@@ -5,104 +5,52 @@ const Playlist = require('../models/Playlist');
 const User = require('../models/User'); 
 const musicService = require('../services/musicService'); 
 const { verifyToken } = require('../middleware/authMiddleware');
-const redis = require('redis'); // <-- NEW: Redis package
 
-// --- GRACEFUL REDIS INITIALIZATION ---
-let redisClient = null;
-(async () => {
-  if (process.env.REDIS_URL) {
-    try {
-      redisClient = redis.createClient({ url: process.env.REDIS_URL });
-      redisClient.on('error', (err) => console.warn('Redis warning: Cache safely bypassed.'));
-      await redisClient.connect();
-      console.log('✅ Redis connected successfully.');
-    } catch (err) {
-      redisClient = null; 
-    }
-  }
-})();
+// Import the centralized Redis client instead of initializing it here
+const redisClient = require('../config/redis'); 
 
 router.get('/search', async (req, res) => {
   try {
     const currentYear = new Date().getFullYear();
     const query = req.query.q || `Top Hits ${currentYear}`; 
-    const cacheKey = `search_${query.toLowerCase().replace(/\s+/g, '_')}`;
+    const cacheKey = `search_${query.toLowerCase().replace(/\\s+/g, '_')}`;
 
     // 1. Try Cache First (Saves iTunes API calls)
     if (redisClient && redisClient.isOpen) {
       const cached = await redisClient.get(cacheKey);
       if (cached) return res.status(200).json(JSON.parse(cached));
     }
-    
-    // 2. Fetch if not cached
-    const songs = await musicService.searchSongs(query); 
-    
-    // 3. Save to cache for 1 hour (3600 seconds)
-    if (redisClient && redisClient.isOpen && songs.length > 0) {
-      await redisClient.setEx(cacheKey, 3600, JSON.stringify(songs));
+
+    // 2. Fallback to API if not cached
+    const tracks = await musicService.searchSongs(query);
+
+    // Cache the fresh results for 1 hour (3600 seconds)
+    if (redisClient && redisClient.isOpen && tracks.length > 0) {
+      await redisClient.setEx(cacheKey, 3600, JSON.stringify(tracks));
     }
 
-    res.status(200).json(songs);
+    res.status(200).json(tracks);
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch music" });
-  }
-});
-
-router.get('/', async (req, res) => {
-  try {
-    const songs = await Song.find();
-    res.status(200).json(songs);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching local songs', error });
-  }
-});
-
-router.post('/log-play', verifyToken, async (req, res) => {
-  try {
-    const { artist } = req.body;
-    const user = await User.findById(req.user.id);
-    if (user && artist) {
-      if (!user.recentArtists.includes(artist)) user.recentArtists.push(artist);
-      if (user.recentArtists.length > 50) user.recentArtists.shift(); 
-      await user.save();
-      
-      // Invalidate Daily Mix cache since their taste changed!
-      if (redisClient && redisClient.isOpen) {
-        await redisClient.del(`daily_mix_${req.user.id}`);
-      }
-    }
-    res.status(200).send("Play logged");
-  } catch (error) {
-    res.status(500).send("Error logging play");
+    res.status(500).json({ message: 'Error searching songs', error: error.message });
   }
 });
 
 router.get('/daily-mix', verifyToken, async (req, res) => {
   try {
-    const cacheKey = `daily_mix_${req.user.id}`;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // 1. Try Cache First (Saves massive DB queries)
+    const favoriteArtists = user.recentArtists || [];
+    const cacheKey = `dailymix_${user._id}`;
+
+    // 1. Try Cache First
     if (redisClient && redisClient.isOpen) {
       const cachedMix = await redisClient.get(cacheKey);
       if (cachedMix) return res.status(200).json(JSON.parse(cachedMix));
     }
 
-    const userPlaylists = await Playlist.find({ user: req.user.id }) || [];
-    const user = await User.findById(req.user.id);
-    
-    let favoriteArtists = [];
-    if (user && user.recentArtists) favoriteArtists = [...user.recentArtists];
-
-    userPlaylists.forEach(playlist => {
-      if (playlist.songs) {
-        playlist.songs.forEach(song => {
-          if (song && song.artist && !favoriteArtists.includes(song.artist)) favoriteArtists.push(song.artist);
-        });
-      }
-    });
-
+    // 2. Generate Mix
     let finalMix = [];
-
     if (favoriteArtists.length === 0) {
       const currentYear = new Date().getFullYear();
       let randomMix = await musicService.searchSongs(`Top Hits ${currentYear}`); 
@@ -135,8 +83,7 @@ router.get('/daily-mix', verifyToken, async (req, res) => {
 
     res.status(200).json(finalMix);
   } catch (error) {
-    console.error("Daily mix error:", error);
-    res.status(500).json({ message: "Failed to generate daily mix" });
+    res.status(500).json({ message: 'Error generating daily mix', error: error.message });
   }
 });
 
