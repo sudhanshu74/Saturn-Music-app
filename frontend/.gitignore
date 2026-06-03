@@ -1,0 +1,15 @@
+# Ignore the heavy packages
+node_modules/
+
+# Ignore the build folders
+dist/
+dist-ssr/
+
+# Ignore my secret passwords!
+.env
+.env.local
+.env.development
+.env.production
+
+# Ignore system files
+.DS_Store

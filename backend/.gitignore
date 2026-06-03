@@ -1,0 +1,8 @@
+# Ignore the heavy packages
+node_modules/
+
+# Ignore my secret passwords!
+.env
+
+# Ignore system files
+.DS_Store
