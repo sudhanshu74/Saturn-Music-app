@@ -23,8 +23,13 @@ const createTransporter = async () => {
     });
   });
 
+// 4. Create and return the Nodemailer transporter
   return nodemailer.createTransport({
-    service: "gmail",
+    // Force IPv4 to prevent Render ENETUNREACH errors
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    family: 4, // <-- This is the magic line that fixes the crash!
     auth: {
       type: "OAuth2",
       user: process.env.EMAIL_USER,
