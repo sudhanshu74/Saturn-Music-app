@@ -17,9 +17,15 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// NEW: Explicit Cloud Configuration for Nodemailer to prevent Render hangs
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  auth: { 
+    user: process.env.EMAIL_USER, 
+    pass: process.env.EMAIL_PASS 
+  }
 });
 
 // Applied 'authLimiter' to all sensitive routes
@@ -42,14 +48,24 @@ router.post('/signup', authLimiter, async (req, res) => {
     await newUser.save();
 
     const verificationLink = `${process.env.BACKEND_URL}/api/auth/verify/${token}`;
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email, 
-      subject: "Welcome to Saturn - Verify Your Email",
-      html: `<h2>Welcome to Saturn, ${username}!</h2><p>Please click the link below to verify your email address:</p><a href="${verificationLink}" style="padding: 10px 20px; background-color: #31c93b; color: black; text-decoration: none; border-radius: 5px;">Verify My Account</a>`
-    });
+    
+    // NEW: Safe Error Handling and Database Rollback
+    try {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email, 
+        subject: "Welcome to Saturn - Verify Your Email",
+        html: `<h2>Welcome to Saturn, ${username}!</h2><p>Please click the link below to verify your email address:</p><a href="${verificationLink}" style="padding: 10px 20px; background-color: #31c93b; color: black; text-decoration: none; border-radius: 5px;">Verify My Account</a>`
+      });
 
-    res.status(201).json({ message: "Account created! Please check your email to verify." });
+      res.status(201).json({ message: "Account created! Please check your email to verify." });
+    } catch (emailError) {
+      // IF EMAIL FAILS: Delete the user from the database so they aren't trapped!
+      await User.findByIdAndDelete(newUser._id);
+      console.error("Nodemailer Error during signup:", emailError);
+      return res.status(500).json({ message: "Could not send verification email. Please try again later." });
+    }
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -136,15 +152,21 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email, 
-      subject: "Saturn - Password Reset OTP",
-      html: `<h2>Password Reset Request</h2><p>Your One-Time Password (OTP) is: <strong style="font-size: 24px; color: #31c93b; letter-spacing: 2px;">${otp}</strong></p><p>This OTP is valid for 10 minutes.</p>`
-    });
-    res.status(200).json({ message: "OTP sent to your email." });
+    // NEW: Added safety net here as well just in case
+    try {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email, 
+        subject: "Saturn - Password Reset OTP",
+        html: `<h2>Password Reset Request</h2><p>Your One-Time Password (OTP) is: <strong style="font-size: 24px; color: #31c93b; letter-spacing: 2px;">${otp}</strong></p><p>This OTP is valid for 10 minutes.</p>`
+      });
+      res.status(200).json({ message: "OTP sent to your email." });
+    } catch (emailError) {
+       console.error("Nodemailer Error during forgot-password:", emailError);
+       return res.status(500).json({ error: "Failed to send OTP email. Please try again later." });
+    }
   } catch (err) {
-    res.status(500).json({ error: "Failed to send OTP." });
+    res.status(500).json({ error: "Failed to process request." });
   }
 });
 

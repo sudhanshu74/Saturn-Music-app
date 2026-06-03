@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { EyeIcon, EyeOffIcon } from '../components/Icons'; // <-- NEW: Imported the icons
+import { EyeIcon, EyeOffIcon } from '../components/Icons'; 
 
 const Auth = () => {
   const location = useLocation();
@@ -20,8 +20,9 @@ const Auth = () => {
     otp: '' 
   });
 
-  // NEW: State to track if the password should be visible
   const [showPassword, setShowPassword] = useState(false);
+  // NEW: Added loading state to prevent multiple clicks
+  const [isLoading, setIsLoading] = useState(false); 
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -30,6 +31,7 @@ const Auth = () => {
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     setError(''); setSuccess('');
+    setIsLoading(true); // Disable button
     
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/forgot-password`, {
@@ -44,12 +46,15 @@ const Auth = () => {
       setAuthMode('reset'); // Move to the OTP verification screen
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsLoading(false); // Re-enable button
     }
   };
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setError(''); setSuccess('');
+    setIsLoading(true); // Disable button
     
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/reset-password`, {
@@ -65,6 +70,8 @@ const Auth = () => {
       setAuthMode('login');
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsLoading(false); // Re-enable button
     }
   };
 
@@ -78,6 +85,8 @@ const Auth = () => {
         return setError("Password must be at least 8 characters long, with 1 uppercase, 1 number, and 1 special character.");
       }
     }
+
+    setIsLoading(true); // Disable button
 
     const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/signup';
     
@@ -100,6 +109,8 @@ const Auth = () => {
       }
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsLoading(false); // Re-enable button
     }
   };
 
@@ -152,7 +163,6 @@ const Auth = () => {
             />
           )}
 
-          {/* NEW: Updated Password Input Block */}
           {(authMode === 'login' || authMode === 'signup' || authMode === 'reset') && (
             <div className="relative w-full">
               <input 
@@ -175,11 +185,20 @@ const Auth = () => {
             </div>
           )}
 
-          <button type="submit" className="w-full bg-[wheat] text-[#28013f] font-luckiest text-xl py-3 rounded-full mt-4 hover:bg-white transition-transform">
-            {authMode === 'login' && 'LOG IN'}
-            {authMode === 'signup' && 'SIGN UP'}
-            {authMode === 'forgot' && 'SEND OTP'}
-            {authMode === 'reset' && 'RESET PASSWORD'}
+          {/* NEW: Disabled state and dynamic text on submit button */}
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className={`w-full bg-[wheat] text-[#28013f] font-luckiest text-xl py-3 rounded-full mt-4 hover:bg-white transition-transform ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            {isLoading ? 'PROCESSING...' : (
+              <>
+                {authMode === 'login' && 'LOG IN'}
+                {authMode === 'signup' && 'SIGN UP'}
+                {authMode === 'forgot' && 'SEND OTP'}
+                {authMode === 'reset' && 'RESET PASSWORD'}
+              </>
+            )}
           </button>
         </form>
 
