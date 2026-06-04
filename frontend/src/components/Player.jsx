@@ -49,14 +49,16 @@ const Player = () => {
     audioRef.current.currentTime = (percent / 100) * duration;
   };
 
+  // FIXED: Replaced h-[8vh] with h-[65px] md:h-[75px] and added shrink-0
   if (!currentSong) return (
-    <footer className="flex justify-center items-center h-[8vh] md:h-[9vh] min-h-[60px] w-full bg-footer-gradient font-boogaloo text-white text-base md:text-xl text-center px-4">
+    <footer className="flex justify-center items-center h-[65px] md:h-[75px] w-full bg-footer-gradient font-boogaloo text-white text-base md:text-xl text-center px-4 shrink-0">
       Select a song from your library to start listening...
     </footer>
   );
 
+  // FIXED: Replaced h-[9vh] with h-[65px] md:h-[75px] and added shrink-0
   return (
-    <footer className="relative flex justify-center items-center h-[9vh] min-h-[65px] md:min-h-[60px] w-full bg-footer-gradient font-boogaloo select-none shrink-0">
+    <footer className="relative flex justify-center items-center h-[65px] md:h-[75px] w-full bg-footer-gradient font-boogaloo select-none shrink-0">
       
       <input
         type="range"
@@ -82,7 +84,6 @@ const Player = () => {
           </div>
         </div>
 
-        {/* FIXED: Adjusted gap-3 and removed 'hidden sm:flex' from shuffle button */}
         <div className="flex justify-center items-center gap-3 md:gap-8 shrink-0">
           <button 
             onClick={() => setIsShuffle(!isShuffle)} 
