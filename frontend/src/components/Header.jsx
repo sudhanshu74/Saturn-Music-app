@@ -3,7 +3,7 @@ import React, { useContext, useState } from 'react';
 import { AudioContext } from '../context/AudioContext';
 import { AuthContext } from '../context/AuthContext';
 import UserProfile from './UserProfile';
-import { SearchIcon, CloseIcon } from './Icons'; // <-- IMPORTED HERE
+import { SearchIcon, CloseIcon } from './Icons'; 
 
 const Header = () => {
   const { searchQuery, setSearchQuery, isMobileMenuOpen, setIsMobileMenuOpen } = useContext(AudioContext);
@@ -11,16 +11,22 @@ const Header = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 flex justify-between items-center h-[10vh] min-h-[60px] w-full px-2 md:pr-6 bg-header-gradient gap-2 md:gap-3">
+    // FIXED: Replaced h-[10vh] with h-[65px] md:h-[80px] and added shrink-0 so it never resizes
+    <header className="sticky top-0 z-50 flex justify-between items-center h-[65px] md:h-[80px] w-full px-2 md:pr-6 bg-header-gradient gap-2 md:gap-3 shrink-0">
       <div className="flex items-center gap-2 md:gap-5 ml-1 md:ml-2 flex-1 min-w-0">
-        <a href="/" className="h-[8vh] md:h-[10vh] p-1 md:p-2 shrink-0">
+        
+        {/* FIXED: Replaced h-[8vh] with fixed pixels */}
+        <a href="/" className="h-[45px] md:h-[55px] p-1 md:p-2 shrink-0">
           <img src="/saturnlogo.svg" alt="Logo" className="h-full" />
         </a>
-        <a href="/" className="hidden md:block h-[6vh] p-2 hover:scale-105 transition-transform shrink-0">
+        
+        {/* FIXED: Replaced h-[6vh] with fixed pixels */}
+        <a href="/" className="hidden md:block h-[40px] p-2 hover:scale-105 transition-transform shrink-0">
           <img src="/homelogo.svg" alt="Home" className="h-full" />
         </a>
 
-        <div className="flex items-center bg-[#101010b3] flex-1 max-w-[500px] h-[5.5vh] md:h-[7vh] px-3 md:px-4 rounded-full min-w-0">
+        {/* FIXED: Replaced h-[5.5vh] with fixed pixels */}
+        <div className="flex items-center bg-[#101010b3] flex-1 max-w-[500px] h-[40px] md:h-[50px] px-3 md:px-4 rounded-full min-w-0">
 
           <SearchIcon className="w-[20px] h-[20px] md:w-[30px] md:h-[30px] stroke-[#d58a8a] mr-1.5 md:mr-2 shrink-0" />
 
