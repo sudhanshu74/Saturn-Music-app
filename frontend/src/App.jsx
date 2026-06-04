@@ -8,8 +8,8 @@ import Auth from "./pages/auth";
 
 const MainLayout = () => {
   return (
-    // FIXED: Changed h-screen to h-[100dvh] to prevent mobile scroll jumping
-    <div className="flex flex-col h-[100dvh] bg-black p-2 gap-2 overflow-hidden font-boogaloo">
+    // FIXED: Replaced h-[100dvh] with fixed inset-0 w-full to pin it to the screen edges
+    <div className="fixed inset-0 w-full flex flex-col bg-black p-2 gap-2 overflow-hidden font-boogaloo">
       <Header />
       <div className="flex flex-1 gap-2 overflow-hidden">
         <Sidebar />

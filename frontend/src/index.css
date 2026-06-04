@@ -5,10 +5,20 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-black text-saturnText font-luckiest min-h-screen overflow-x-hidden;
+/* STOP iOS SAFARI BOUNCE AND SCROLL RECALCULATIONS */
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  position: fixed;
   margin: 0;
   padding: 0;
+}
+
+body {
+  /* REMOVED min-h-screen so it doesn't inject 100vh back into the app */
+  @apply bg-black text-saturnText font-luckiest;
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
