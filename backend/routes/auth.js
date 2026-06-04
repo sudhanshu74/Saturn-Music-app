@@ -107,7 +107,7 @@ router.post('/login', authLimiter, async (req, res) => {
       res.cookie('saturn_device', deviceId, {
         httpOnly: true, 
         secure: process.env.NODE_ENV === 'production', 
-        sameSite: 'lax', 
+        sameSite: 'none', // <--- FIXED FOR CROSS-DOMAIN
         maxAge: 365 * 24 * 60 * 60 * 1000 
       });
     } else if (!user.knownIps.includes(deviceId)) {
@@ -151,7 +151,7 @@ router.post('/login', authLimiter, async (req, res) => {
     await user.save();
 
     res.cookie('jwt_refresh', refreshToken, {
-      httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 
+      httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'none', maxAge: 7 * 24 * 60 * 60 * 1000 // <--- FIXED FOR CROSS-DOMAIN
     });
 
     res.status(200).json({ message: "Logged in successfully", accessToken, user: { id: user._id, username: user.username, email: user.email, role: user.role } });
