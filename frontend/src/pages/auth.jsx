@@ -94,6 +94,7 @@ const Auth = () => {
       const response = await fetch(`${import.meta.env.VITE_API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Added this line to accept the Device Cookie
         body: JSON.stringify({ username: formData.username, email: formData.email, password: formData.password })
       });
 

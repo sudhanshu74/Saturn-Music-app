@@ -17,6 +17,7 @@ export const AudioProvider = ({ children }) => {
   const [playlists, setPlaylists] = useState([]);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
     const fetchRealMusic = async () => {
@@ -45,7 +46,8 @@ export const AudioProvider = ({ children }) => {
     audioRef.current.play();
     setIsPlaying(true);
 
-    if (song && song.artist) {
+    //  Added token check so guests can play music without triggering a 401 redirect
+    if (song && song.artist && localStorage.getItem('saturn_token')) {
       fetchWithAuth(`${import.meta.env.VITE_API_URL}/api/songs/log-play`, {
         method: 'POST',
         body: JSON.stringify({ artist: song.artist })
@@ -102,7 +104,8 @@ export const AudioProvider = ({ children }) => {
       playSong, togglePlay, playNext, playPrevious, setIsShuffle,
       searchQuery, setSearchQuery,
       activePlaylistId, setActivePlaylistId,
-      isMobileMenuOpen, setIsMobileMenuOpen
+      isMobileMenuOpen, setIsMobileMenuOpen,
+      showAuthModal, setShowAuthModal
     }}>
       {children}
     </AudioContext.Provider>

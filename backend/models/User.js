@@ -10,8 +10,8 @@ const userSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false }, 
   verificationToken: { type: String }, 
 
-  // Store the refresh token here for secure JWT sessions
-  refreshToken: { type: String, default: null },
+  // UPGRADE: Array of refresh tokens for multi-device support
+  refreshTokens: [{ type: String }],
 
   // Store recently searched/played artists for the Recommendation Engine
   recentArtists: [{

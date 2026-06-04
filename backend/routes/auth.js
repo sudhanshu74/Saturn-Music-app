@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit'); 
 const User = require('../models/User');
-const emailService = require('../services/emailService'); // <-- NEW: Import Brevo service
+const emailService = require('../services/emailService'); // Import Brevo service
 const router = express.Router();
 
 const authLimiter = rateLimit({
@@ -92,39 +92,62 @@ router.post('/login', authLimiter, async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials." });
 
-    // --- NEW: INVISIBLE SECURITY ALERT ---
-    // Capture the IP and the browser details
-    const currentIp = req.ip || req.connection.remoteAddress;
-    const userAgent = req.headers['user-agent'] || 'an unknown device';
+    // --- FIX: PERSISTENT DEVICE ALERT SYSTEM ---
+    let deviceId = req.cookies.saturn_device;
+    let isNewDevice = false;
 
-    // If the user's knownIps array doesn't exist yet (for older accounts), create it
     if (!user.knownIps) user.knownIps = [];
 
-    // If this IP has never logged in before, trigger the email
-    if (!user.knownIps.includes(currentIp)) {
+    // If no device cookie exists on this browser, generate one
+    if (!deviceId) {
+      isNewDevice = true;
+      deviceId = crypto.randomBytes(16).toString('hex');
       
-      // We don't use 'await' here! We let the email send in the background 
-      // so it doesn't slow down the user's login process.
+      // Set the new device cookie to last 1 year
+      res.cookie('saturn_device', deviceId, {
+        httpOnly: true, 
+        secure: process.env.NODE_ENV === 'production', 
+        sameSite: 'lax', 
+        maxAge: 365 * 24 * 60 * 60 * 1000 
+      });
+    } else if (!user.knownIps.includes(deviceId)) {
+      // Cookie exists, but this user account has never seen it before
+      isNewDevice = true;
+    }
+
+    if (isNewDevice) {
+      const currentIp = req.ip || req.connection.remoteAddress;
+      const userAgent = req.headers['user-agent'] || 'an unknown device';
+
       emailService.sendEmail(
         user.email,
         "Security Alert: New Login to Saturn",
         `<div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: #31c93b;">New Login Detected</h2>
+          <h2 style="color: #31c93b;">New Device Detected</h2>
           <p>Hi ${user.username},</p>
-          <p>We noticed a login to your Saturn Music account from a new IP address (<strong>${currentIp}</strong>) using <strong>${userAgent}</strong>.</p>
-          <p>If this was you, no action is needed. If you did not authorize this login, please reset your password immediately to secure your account.</p>
+          <p>We noticed a login to your Saturn Music account from a new device or browser.</p>
+          <p><strong>IP:</strong> ${currentIp}</p>
+          <p><strong>Browser:</strong> ${userAgent}</p>
+          <p>If this was you, no action is needed. If you did not authorize this login, please reset your password immediately.</p>
         </div>`
       ).catch(err => console.error("Silent email failure:", err));
 
-      // Save this new IP so we don't alert them again for this device
-      user.knownIps.push(currentIp);
+      // Save the persistent Device ID to MongoDB instead of the volatile IP
+      user.knownIps.push(deviceId);
     }
     // --- END SECURITY ALERT ---
 
     const accessToken = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '15m' });
     const refreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
 
-    user.refreshToken = refreshToken;
+    // UPGRADE: Push to the array for multi-device support
+    user.refreshTokens.push(refreshToken);
+    
+    // Prevent the array from growing infinitely (e.g., max 5 devices)
+    if (user.refreshTokens.length > 5) {
+      user.refreshTokens.shift(); 
+    }
+    
     await user.save();
 
     res.cookie('jwt_refresh', refreshToken, {
@@ -142,7 +165,8 @@ router.post('/refresh', async (req, res) => {
   if (!refreshToken) return res.status(401).json({ message: "No refresh token provided" });
 
   try {
-    const user = await User.findOne({ refreshToken: refreshToken });
+    // UPGRADE: Find user where the array contains this specific token
+    const user = await User.findOne({ refreshTokens: refreshToken });
     if (!user) return res.status(403).json({ message: "Invalid refresh token" });
 
     jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, decoded) => {
@@ -158,7 +182,13 @@ router.post('/refresh', async (req, res) => {
 router.post('/logout', async (req, res) => {
   const refreshToken = req.cookies.jwt_refresh;
   try {
-    if (refreshToken) await User.findOneAndUpdate({ refreshToken: refreshToken }, { refreshToken: null });
+    // UPGRADE: Use $pull to remove only this device's token from the array
+    if (refreshToken) {
+      await User.findOneAndUpdate(
+        { refreshTokens: refreshToken }, 
+        { $pull: { refreshTokens: refreshToken } }
+      );
+    }
     res.clearCookie('jwt_refresh');
     res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
@@ -210,8 +240,8 @@ router.post('/reset-password', authLimiter, async (req, res) => {
     user.resetPasswordOtp = undefined;
     user.resetPasswordExpires = undefined;
     
-    // --> NEW LINE: Instantly kills old sessions for security after password reset!
-    user.refreshToken = null; 
+    // UPGRADE: Instantly kills old sessions on ALL devices for security
+    user.refreshTokens = []; 
     
     await user.save();
 

@@ -6,7 +6,7 @@ import { fetchWithAuth } from '../utils/api';
 import { HomeIcon, CloseIcon, BackIcon, PlusIcon, TrashIcon } from './Icons'; // <-- IMPORTED HERE
 
 const Sidebar = () => {
-  const { playlists, setPlaylists, activePlaylistId, setActivePlaylistId, playSong, isMobileMenuOpen, setIsMobileMenuOpen } = useContext(AudioContext);
+  const { playlists, setPlaylists, activePlaylistId, setActivePlaylistId, playSong, isMobileMenuOpen, setIsMobileMenuOpen, setShowAuthModal } = useContext(AudioContext);
   const { token, user } = useContext(AuthContext);
 
   const [newPlaylistName, setNewPlaylistName] = useState("");
@@ -184,8 +184,15 @@ const Sidebar = () => {
 
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-white/70 font-luckiest tracking-wide text-sm">YOUR LIBRARY</h2>
+                {/* FIX: Replaced the simple toggle with the auth check interceptor */}
                 <button
-                  onClick={() => setIsCreatingPlaylist(!isCreatingPlaylist)}
+                  onClick={() => {
+                    if (!token) {
+                      setShowAuthModal(true);
+                    } else {
+                      setIsCreatingPlaylist(!isCreatingPlaylist);
+                    }
+                  }}
                   className="w-8 h-8 rounded-full text-white flex items-center justify-center transition-all duration-300 hover:bg-[#31c93b]/30"
                 >
                   <PlusIcon className="w-5 h-5" />
