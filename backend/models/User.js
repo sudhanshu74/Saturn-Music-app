@@ -19,6 +19,11 @@ const userSchema = new mongoose.Schema({
     trim: true
   }],
 
+  // Store known IPs to prevent spamming login alerts for normal devices
+  knownIps: [{
+    type: String
+  }],
+
   // FORGOT PASSWORD FIELDS
   resetPasswordOtp: { type: String },
   resetPasswordExpires: { type: Date }

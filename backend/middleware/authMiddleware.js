@@ -9,7 +9,8 @@ const verifyToken = (req, res, next) => {
     req.user = verified; // This attaches the user ID and role to the request
     next();
   } catch (err) {
-    res.status(400).json({ message: "Invalid Token." });
+    // THIS LINE CHANGED: It is now 401 instead of 400!
+    res.status(401).json({ message: "Invalid Token." });
   }
 };
 

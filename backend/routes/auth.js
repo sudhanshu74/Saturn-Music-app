@@ -92,6 +92,35 @@ router.post('/login', authLimiter, async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials." });
 
+    // --- NEW: INVISIBLE SECURITY ALERT ---
+    // Capture the IP and the browser details
+    const currentIp = req.ip || req.connection.remoteAddress;
+    const userAgent = req.headers['user-agent'] || 'an unknown device';
+
+    // If the user's knownIps array doesn't exist yet (for older accounts), create it
+    if (!user.knownIps) user.knownIps = [];
+
+    // If this IP has never logged in before, trigger the email
+    if (!user.knownIps.includes(currentIp)) {
+      
+      // We don't use 'await' here! We let the email send in the background 
+      // so it doesn't slow down the user's login process.
+      emailService.sendEmail(
+        user.email,
+        "Security Alert: New Login to Saturn",
+        `<div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+          <h2 style="color: #31c93b;">New Login Detected</h2>
+          <p>Hi ${user.username},</p>
+          <p>We noticed a login to your Saturn Music account from a new IP address (<strong>${currentIp}</strong>) using <strong>${userAgent}</strong>.</p>
+          <p>If this was you, no action is needed. If you did not authorize this login, please reset your password immediately to secure your account.</p>
+        </div>`
+      ).catch(err => console.error("Silent email failure:", err));
+
+      // Save this new IP so we don't alert them again for this device
+      user.knownIps.push(currentIp);
+    }
+    // --- END SECURITY ALERT ---
+
     const accessToken = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '15m' });
     const refreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
 
