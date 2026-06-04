@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { AudioContext } from '../context/AudioContext';
-import { ShuffleIcon, PrevIcon, PlayIcon, PauseIcon, NextIcon, VolumeIcon } from './Icons'; // <-- IMPORTED HERE
+import { ShuffleIcon, PrevIcon, PlayIcon, PauseIcon, NextIcon, VolumeIcon } from './Icons';
 
 const Player = () => {
   const { 
@@ -82,10 +82,11 @@ const Player = () => {
           </div>
         </div>
 
-        <div className="flex justify-center items-center gap-5 md:gap-8 shrink-0">
+        {/* FIXED: Adjusted gap-3 and removed 'hidden sm:flex' from shuffle button */}
+        <div className="flex justify-center items-center gap-3 md:gap-8 shrink-0">
           <button 
             onClick={() => setIsShuffle(!isShuffle)} 
-            className={`hidden sm:flex items-center justify-center transition-all duration-300 ${isShuffle ? 'text-[#31c93b]' : 'text-white/40 hover:text-white'}`}
+            className={`flex items-center justify-center transition-all duration-300 ${isShuffle ? 'text-[#31c93b]' : 'text-white/40 hover:text-white'}`}
           >
             <ShuffleIcon className="w-5 h-5 md:w-6 md:h-6" />
           </button>

@@ -4,12 +4,12 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
 import Player from './components/Player';
-// This now perfectly matches your file tree:
 import Auth from "./pages/auth"; 
 
 const MainLayout = () => {
   return (
-    <div className="flex flex-col h-screen bg-black p-2 gap-2 overflow-hidden font-boogaloo">
+    // FIXED: Changed h-screen to h-[100dvh] to prevent mobile scroll jumping
+    <div className="flex flex-col h-[100dvh] bg-black p-2 gap-2 overflow-hidden font-boogaloo">
       <Header />
       <div className="flex flex-1 gap-2 overflow-hidden">
         <Sidebar />
