@@ -2,18 +2,12 @@ import React, { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
 const UserProfile = ({ isOpen, setIsOpen }) => {
-  const { user, setToken, setUser } = useContext(AuthContext);
+  // FIXED: Destructured the secure 'logout' function from AuthContext
+  const { user, logout } = useContext(AuthContext);
 
   const handleLogout = () => {
-    localStorage.removeItem('saturn_token');
-    localStorage.removeItem('saturn_refreshToken');
-    localStorage.removeItem('saturn_user');
-
-    if (setToken) setToken(null);
-    if (setUser) setUser(null);
-
-    // CHANGED: Redirects to home page instead of /auth
-    window.location.href = '/';
+    // FIXED: Now we trigger the context logout to properly clear the backend cookie!
+    logout();
   };
 
   if (!user) return null;

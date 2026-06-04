@@ -13,7 +13,7 @@ router.get('/search', async (req, res) => {
   try {
     const currentYear = new Date().getFullYear();
     const query = req.query.q || `Top Hits ${currentYear}`; 
-    const cacheKey = `search_${query.toLowerCase().replace(/\\s+/g, '_')}`;
+    const cacheKey = `search_${query.toLowerCase().replace(/\s+/g, '_')}`;
 
     // 1. Try Cache First (Saves iTunes API calls)
     if (redisClient && redisClient.isOpen) {
@@ -84,6 +84,41 @@ router.get('/daily-mix', verifyToken, async (req, res) => {
     res.status(200).json(finalMix);
   } catch (error) {
     res.status(500).json({ message: 'Error generating daily mix', error: error.message });
+  }
+});
+
+// POST: Log a played artist to update the user's taste profile
+router.post('/log-play', verifyToken, async (req, res) => {
+  try {
+    const { artist } = req.body;
+    if (!artist) return res.status(400).json({ message: "Artist name is required" });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // 1. Remove the artist if they are already in the array (prevents duplicates)
+    user.recentArtists = user.recentArtists.filter(a => a !== artist);
+    
+    // 2. Add the artist to the end of the array (most recent)
+    user.recentArtists.push(artist);
+
+    // 3. Keep the array small and fast (Only keep the 15 most recent artists)
+    if (user.recentArtists.length > 15) {
+      user.recentArtists.shift(); 
+    }
+
+    // 4. Save to database
+    await user.save();
+    
+    // 5. Invalidate the user's daily mix cache so a new mix is generated next time!
+    if (redisClient && redisClient.isOpen) {
+      await redisClient.del(`dailymix_${user._id}`);
+    }
+
+    res.status(200).json({ message: "Taste profile updated" });
+  } catch (error) {
+    console.error("Error logging play:", error);
+    res.status(500).json({ message: "Server error logging play" });
   }
 });
 

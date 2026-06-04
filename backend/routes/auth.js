@@ -180,6 +180,10 @@ router.post('/reset-password', authLimiter, async (req, res) => {
     user.password = await bcrypt.hash(newPassword, salt);
     user.resetPasswordOtp = undefined;
     user.resetPasswordExpires = undefined;
+    
+    // --> NEW LINE: Instantly kills old sessions for security after password reset!
+    user.refreshToken = null; 
+    
     await user.save();
 
     res.status(200).json({ message: "Password reset successfully! You can now log in." });
