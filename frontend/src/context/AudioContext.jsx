@@ -1,9 +1,11 @@
-import React, { createContext, useState, useRef, useEffect } from 'react';
+import React, { createContext, useState, useRef, useEffect, useContext } from 'react';
 import { fetchWithAuth } from '../utils/api'; 
+import { AuthContext } from './AuthContext'; // <-- IMPORTED AUTH CONTEXT
 
 export const AudioContext = createContext();
 
 export const AudioProvider = ({ children }) => {
+  const { token } = useContext(AuthContext); // <-- GRAB THE TOKEN
 
   const audioRef = useRef(new Audio());
 
@@ -19,6 +21,18 @@ export const AudioProvider = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
+  //  THE FRESH SLATE TRIGGER 
+  //  watches the token. When it suddenly exists (successful login) and it kills the guest audio and clears the player UI.
+  useEffect(() => {
+    if (token && currentSong) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsPlaying(false);
+      setCurrentSong(null);
+      setQueue([]);
+    }
+  }, [token]);
+ 
   useEffect(() => {
     const fetchRealMusic = async () => {
       try {
@@ -46,7 +60,6 @@ export const AudioProvider = ({ children }) => {
     audioRef.current.play();
     setIsPlaying(true);
 
-    //  Added token check so guests can play music without triggering a 401 redirect
     if (song && song.artist && localStorage.getItem('saturn_token')) {
       fetchWithAuth(`${import.meta.env.VITE_API_URL}/api/songs/log-play`, {
         method: 'POST',

@@ -29,19 +29,20 @@ const SongCard = ({ song, library, playSong, playlists, activePlaylistId, onAddT
           alt="cover"
           onLoad={() => setIsLoaded(true)}
         />
-        <div className="absolute inset-0 bg-black/30 opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+        {/* FIX: Overlay now checks for actual hover capability instead of screen width */}
+        <div className="absolute inset-0 bg-black/30 opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
+        {/* FIX: Play button now uses the hover media query for visibility and translation */}
         <button
           onClick={(e) => {
             e.stopPropagation();
             playSong(song, library);
           }}
-          className="absolute bottom-2 right-2 w-10 h-10 md:w-11 md:h-11 bg-[wheat] text-[#28013f] rounded-full flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 shadow-xl md:translate-y-2 md:group-hover:translate-y-0 z-20 hover:scale-110 hover:bg-white"
+          className="absolute bottom-2 right-2 w-10 h-10 md:w-11 md:h-11 bg-[wheat] text-[#28013f] rounded-full flex items-center justify-center opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-all duration-300 shadow-xl [@media(hover:hover)]:translate-y-2 [@media(hover:hover)]:group-hover:translate-y-0 z-20 hover:scale-110 hover:bg-white"
         >
           <PlayCircleIcon className="w-4 h-4 md:w-5 md:h-5 ml-0.5" />
         </button>
 
-        {/* FIX: Removed the restrictive playlist.length wrapper so guests can click the plus icon */}
         <div className="absolute top-2 right-2 z-20">
           {activePlaylistId ? (
             <button
@@ -53,20 +54,21 @@ const SongCard = ({ song, library, playSong, playlists, activePlaylistId, onAddT
               className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center transition-all shadow-md 
                 ${isAlreadyAdded
                   ? 'bg-[#31c93b] text-black opacity-100 cursor-default'
-                  : 'bg-black/60 hover:bg-[#31c93b] text-white hover:text-black opacity-100 md:opacity-0 md:group-hover:opacity-100'
+                  : 'bg-black/60 hover:bg-[#31c93b] text-white hover:text-black opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100'
                 }`}
             >
               {isAlreadyAdded ? <CheckIcon className="w-4 h-4 md:w-5 md:h-5" /> : <PlusIcon className="w-4 h-4 md:w-5 md:h-5" />}
             </button>
           ) : (
             <>
+              {/* FIX: Plus icon now uses the hover media query */}
               <button
                 onClick={(e) => { 
                   e.stopPropagation(); 
                   if (!token) return setShowAuthModal(true); // Trigger modal
                   setShowMenu(!showMenu); 
                 }}
-                className="w-7 h-7 md:w-8 md:h-8 bg-black/60 hover:bg-black text-white rounded-full flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-md"
+                className="w-7 h-7 md:w-8 md:h-8 bg-black/60 hover:bg-black text-white rounded-full flex items-center justify-center opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity shadow-md"
               >
                 <PlusIcon className="w-4 h-4 md:w-5 md:h-5" />
               </button>

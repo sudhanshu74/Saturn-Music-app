@@ -10,18 +10,13 @@ const userSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false }, 
   verificationToken: { type: String }, 
 
-  // UPGRADE: Array of refresh tokens for multi-device support
+  //  Array of refresh tokens for multi-device support
   refreshTokens: [{ type: String }],
 
   // Store recently searched/played artists for the Recommendation Engine
   recentArtists: [{
     type: String,
     trim: true
-  }],
-
-  // Store known IPs to prevent spamming login alerts for normal devices
-  knownIps: [{
-    type: String
   }],
 
   // FORGOT PASSWORD FIELDS
